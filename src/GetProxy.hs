@@ -28,10 +28,10 @@ listenPort port = do
     bind socket $ addrAddress addr
     listen socket 0
 
-    (socket, _) <- accept socket
+    (socketConn, _) <- accept socket
+    close socket
     
-    -- возможно тут что то не так
-    return socket
+    return socketConn
 
 
 connectToServer :: (Maybe HostName, Maybe ServiceName) -> IO (Socket)
@@ -52,12 +52,12 @@ getResponseFromServer cache request = do
     socketServer <- connectToServer $ host $ parseHTTP request 
     send socketServer request
 
-    let maxResponseSize = 1048576 --увеличить
+    let maxResponseSize = 67108864 -- max == 64mb
     response <- recv socketServer maxResponseSize 
 
     atomically $ insert response request cache
 
-    close' socketServer
+    close socketServer
     return response
 
     
@@ -65,8 +65,7 @@ getResponse :: Map Request Response -> Request -> IO (Response)
 getResponse cache request = do
     cachedResponse <- atomically $ Map.lookup request cache
 
-    -- скорее всего убрать кейс оф
-    case cachedResponse of
+    case cachedResponse of -- скорее всего убрать кейс оф
         Nothing -> getResponseFromServer cache request >>= return
         Just response -> return response
 
@@ -82,10 +81,7 @@ proxyThread cache socket = do
 cachedProxy :: Map Request Response -> PortNumber -> IO ()
 cachedProxy cache port = do 
     socket <- listenPort port
-    forkIO $ proxyThread cache socket 
-    -- работает ли многопоток как надо?
-    -- почему то сбрасывается соединение
-
+    forkIO $ proxyThread cache socket -- работает ли многопоток как надо?
     cachedProxy cache port
 
 
