@@ -9,11 +9,12 @@ main :: IO ()
 main = do 
     -- тоже переделать, но потом
     let helpMsg = "Usage: getproxy <port>" 
+    let succMsg = "Starting proxy..."
 
     args <- getArgs
 
     case readMaybe $ head (args ++ [""]) :: Maybe PortNumber of 
-        Just port -> startProxy port 
+        Just port -> putStrLn succMsg >> startProxy port 
         Nothing -> putStrLn helpMsg
 
         

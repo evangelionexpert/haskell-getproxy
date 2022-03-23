@@ -16,7 +16,7 @@ type Request  = ByteString
 type Response = ByteString
 -- переделать в дату или не стоит???
 
-listenPort :: PortNumber -> IO (Socket)
+listenPort :: PortNumber -> IO Socket
 listenPort port = do 
     let clientHints = Just $ defaultHints {addrFlags = [AI_PASSIVE], 
                                            addrSocketType = Stream}
@@ -26,15 +26,15 @@ listenPort port = do
     setSocketOption socket ReuseAddr 1 
 
     bind socket $ addrAddress addr
-    listen socket 0
-
-    (socketConn, _) <- accept socket
-    close socket
+    listen socket 5
+    return socket
     
-    return socketConn
+
+acceptConn :: Socket -> IO Socket
+acceptConn socket = accept socket >>= return . fst 
 
 
-connectToServer :: (Maybe HostName, Maybe ServiceName) -> IO (Socket)
+connectToServer :: (Maybe HostName, Maybe ServiceName) -> IO Socket
 connectToServer hostName = do 
     let serverHints = Just $ defaultHints {addrSocketType = Stream}
 
@@ -43,11 +43,10 @@ connectToServer hostName = do
     setSocketOption socket ReuseAddr 1 
 
     connect socket $ addrAddress addr
-
     return socket
 
 
-getResponseFromServer :: Map Request Response -> Request -> IO (Response)
+getResponseFromServer :: Map Request Response -> Request -> IO Response
 getResponseFromServer cache request = do 
     socketServer <- connectToServer $ host $ parseHTTP request 
     send socketServer request
@@ -60,8 +59,8 @@ getResponseFromServer cache request = do
     close socketServer
     return response
 
-    
-getResponse :: Map Request Response -> Request -> IO (Response)
+
+getResponse :: Map Request Response -> Request -> IO Response
 getResponse cache request = do
     cachedResponse <- atomically $ Map.lookup request cache
 
@@ -78,17 +77,16 @@ proxyThread cache socket = do
     close socket
 
 
-cachedProxy :: Map Request Response -> PortNumber -> IO ()
-cachedProxy cache port = do 
-    socket <- listenPort port
-    forkIO $ proxyThread cache socket -- работает ли многопоток как надо?
-    cachedProxy cache port
+cachedProxy :: Map Request Response -> Socket -> IO ()
+cachedProxy cache socket = do 
+    acceptConn socket >>= forkIO . proxyThread cache
+    cachedProxy cache socket
 
 
 startProxy :: PortNumber -> IO ()
 startProxy port = withSocketsDo $ do 
     cache <- newIO 
-    cachedProxy cache port
+    listenPort port >>= cachedProxy cache
 
 
 
