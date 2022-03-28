@@ -2,6 +2,8 @@ module GetProxy (startProxy) where
 
 -- лишние либы????
 import GetProxy.LittleParser
+import GetProxy.Internal
+
 import System.IO
 import Network.Socket.ByteString
 import Network.Socket
@@ -9,78 +11,47 @@ import Network.Socket
 import StmContainers.Map as Map
 import Control.Concurrent
 import Control.Monad.STM
+import Control.Monad
 
-import Data.ByteString.Char8 as Str 
+import Data.Either
 
-type Request  = ByteString 
-type Response = ByteString
--- переделать в дату или не стоит???
-
-listenPort :: PortNumber -> IO Socket
-listenPort port = do 
-    let clientHints = Just $ defaultHints {addrFlags = [AI_PASSIVE], 
-                                           addrSocketType = Stream}
-
-    addr:_ <- getAddrInfo clientHints Nothing $ Just $ show $ port
-    socket <- openSocket addr
-    setSocketOption socket ReuseAddr 1 
-
-    bind socket $ addrAddress addr
-    listen socket 5
-    return socket
-    
-
-acceptConn :: Socket -> IO Socket
-acceptConn socket = accept socket >>= return . fst 
+import Control.Exception
+import Control.Monad.Trans.Maybe
 
 
-connectToServer :: (Maybe HostName, Maybe ServiceName) -> IO Socket
-connectToServer hostName = do 
-    let serverHints = Just $ defaultHints {addrSocketType = Stream}
+getResponseFromServer :: Request -> MaybeT IO Response
+getResponseFromServer request = MaybeT $ do 
+    maybeSocket <- runMaybeT $ connectToServer $ host $ parseHTTP request 
 
-    addr:_ <- getAddrInfo serverHints (fst hostName) (snd hostName)
-    socket <- openSocket addr
-    setSocketOption socket ReuseAddr 1 
-
-    connect socket $ addrAddress addr
-    return socket
+    case maybeSocket of -- закинуть в интернал
+        Just socket -> getResponseFromSocket socket request >>= return . Just
+        Nothing     -> return Nothing
 
 
-getResponseFromServer :: Map Request Response -> Request -> IO Response
-getResponseFromServer cache request = do 
-    socketServer <- connectToServer $ host $ parseHTTP request 
-    send socketServer request
-
-    let maxResponseSize = 67108864 -- max == 64mb
-    response <- recv socketServer maxResponseSize 
-
-    atomically $ insert response request cache
-
-    close socketServer
-    return response
-
-
-getResponse :: Map Request Response -> Request -> IO Response
-getResponse cache request = do
+getResponse :: Map Request Response -> Request -> MaybeT IO Response
+getResponse cache request = MaybeT $ do
     cachedResponse <- atomically $ Map.lookup request cache
 
-    case cachedResponse of -- скорее всего убрать кейс оф
-        Nothing -> getResponseFromServer cache request >>= return
-        Just response -> return response
+    case cachedResponse of -- это ужас потом переписать
+        Nothing -> do
+            response <- runMaybeT $ getResponseFromServer request
+            cacheData cache (Just request, response)
+            return response
+        Just response -> 
+            return $ Just response
 
 
 proxyThread :: Map Request Response -> Socket -> IO ()
 proxyThread cache socket = do 
     let maxRequestSize = 1048576
-    recv socket maxRequestSize >>= getResponse cache >>= send socket
+    recv socket maxRequestSize >>= runMaybeT . getResponse cache >>= maybeSend socket
 
     close socket
 
 
 cachedProxy :: Map Request Response -> Socket -> IO ()
-cachedProxy cache socket = do 
+cachedProxy cache socket = forever $
     acceptConn socket >>= forkIO . proxyThread cache
-    cachedProxy cache socket
 
 
 startProxy :: PortNumber -> IO ()

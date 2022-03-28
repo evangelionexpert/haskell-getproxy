@@ -29,7 +29,7 @@ library:
   - network
   - stm-containers
   - stm
-  
+  - transformers
 
 executables:
   haskell-getproxy-exe:
@@ -40,7 +40,6 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     - -Wall
-    - -O2
     dependencies:
     - haskell-getproxy
     - network
