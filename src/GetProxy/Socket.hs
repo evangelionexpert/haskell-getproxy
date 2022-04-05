@@ -37,7 +37,3 @@ getResponseFromServer :: Request -> MaybeT IO Response
 getResponseFromServer request = MaybeT $ do 
     socket <- runMaybeT $ uncurry connectToServer $ parseHost request
     sequence $ getResponseFromSocket <$> socket <*> (Just request)
-
-
-acceptConn :: Socket -> IO Socket
-acceptConn socket = accept socket >>= return . fst

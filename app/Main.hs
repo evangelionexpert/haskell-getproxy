@@ -16,4 +16,3 @@ main = do
     case readMaybe arg :: Maybe PortNumber of 
         Just port -> putStrLn succMsg >> startProxy port >> putStrLn exitMsg
         Nothing -> putStrLn helpMsg
-    
