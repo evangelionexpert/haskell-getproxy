@@ -1,12 +1,16 @@
 -- готовую либу не нашел ... . . .. . . .  . . ....... .. . . . . . 
 {-# LANGUAGE OverloadedStrings #-} 
 
-module GetProxy.LittleParser (LittleRequest (..), parseHTTP, methodIsGet, parseHost) where 
+module GetProxy.LittleParser (LittleRequest (..), 
+                              parseHTTP, 
+                              methodIsGet, 
+                              parseHost) where 
 
 import Data.List as List
 import Data.ByteString.Char8 (unpack)
 import Network.Socket (HostName, ServiceName)
 import GetProxy.Types
+
 
 data LittleRequest = LittleRequest { method :: String,
                                      path :: String,

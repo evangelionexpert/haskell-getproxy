@@ -13,8 +13,8 @@ import Control.Monad
 import Control.Monad.Trans.Maybe
 
 
-listenPort :: PortNumber -> IO Socket
-listenPort port = do 
+listenPort :: PortNumber -> MaybeT IO Socket
+listenPort port = MaybeT $ do 
     let pendingConnections = 5
     let hints = Just $ defaultHints {addrFlags = [AI_PASSIVE], 
                                      addrSocketType = Stream}
@@ -29,7 +29,8 @@ connectToServer host port = MaybeT $ do
     
     addr <- try $ head <$> getAddrInfo hints host port
                    :: IO (Either IOException AddrInfo)
-    mapM connectToAddr $ toMaybe addr 
+
+    liftM join $ mapM connectToAddr (toMaybe addr)
 
 
 getResponseFromServer :: Request -> MaybeT IO Response

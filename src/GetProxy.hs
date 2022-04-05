@@ -40,4 +40,4 @@ cachedProxy cache socket = forever $
 startProxy :: PortNumber -> IO ()
 startProxy port = withSocketsDo $ do 
     cache <- newIO 
-    listenPort port >>= cachedProxy cache
+    runMaybeT (listenPort port) >>= mapM_ (cachedProxy cache)
