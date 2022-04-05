@@ -3,6 +3,7 @@ module GetProxy (startProxy) where
 import GetProxy.Socket
 import GetProxy.Cache
 import GetProxy.Types
+import GetProxy.LittleParser
 
 import Network.Socket
 import Network.Socket.ByteString
@@ -16,7 +17,7 @@ getResponse :: Map Request Response -> Request -> MaybeT IO Response
 getResponse cache request = MaybeT $ do
     cachedResponse <- lookupMsg cache request
     
-    if cachedResponse == Nothing then do
+    if cachedResponse == Nothing && methodIsGet request then do
         response <- runMaybeT $ getResponseFromServer request
         sequence_ $ cacheMsg <$> Just cache <*> Just request <*> response
         return response 
