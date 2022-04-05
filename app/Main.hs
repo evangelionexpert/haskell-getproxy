@@ -4,14 +4,14 @@ import GetProxy
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
 import Network.Socket (PortNumber)
-import Control.Monad
 
 main :: IO ()
 main = do 
-    let helpMsg = "Usage: getproxy <port>" 
+    let helpMsg = "Usage: getproxy <port [0-65535]>" 
     let succMsg = "Starting proxy..."
 
-    startProxy 33333
+    arg <- head <$> getArgs
 
-        
- 
+    case readMaybe arg :: Maybe PortNumber of 
+        Just port -> putStrLn succMsg >> startProxy port 
+        Nothing -> putStrLn helpMsg
