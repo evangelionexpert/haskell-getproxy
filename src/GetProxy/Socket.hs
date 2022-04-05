@@ -30,10 +30,10 @@ connectToServer host port = MaybeT $ do
     addr <- try $ head <$> getAddrInfo hints host port
                    :: IO (Either IOException AddrInfo)
 
-    liftM join $ mapM connectToAddr (toMaybe addr)
+    liftM join $ mapM connectToAddr $ toMaybe addr
 
 
 getResponseFromServer :: Request -> MaybeT IO Response
 getResponseFromServer request = MaybeT $ do 
     socket <- runMaybeT $ uncurry connectToServer $ parseHost request
-    sequence $ getResponseFromSocket <$> socket <*> (Just request)
+    sequence $ getResponseFromSocket <$> socket <*> Just request

@@ -18,7 +18,7 @@ getResponse cache request = MaybeT $ do
     
     if cachedResponse == Nothing then do
         response <- runMaybeT $ getResponseFromServer request
-        sequence_ $ cacheMsg <$> (Just cache) <*> (Just request) <*> response
+        sequence_ $ cacheMsg <$> Just cache <*> Just request <*> response
         return response 
     else 
         return cachedResponse
