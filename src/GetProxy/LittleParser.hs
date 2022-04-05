@@ -1,31 +1,28 @@
--- образцово-показательный говнокод для первичной проверки, 
--- обязательно!!!!!!! переписать или найти готовую либу
-
+-- готовую либу не нашел ... . . .. . . .  . . ....... .. . . . . . 
 {-# LANGUAGE OverloadedStrings #-} 
 
-
-module GetProxy.LittleParser (LittleRequest (..), parseHTTP) where 
+module GetProxy.LittleParser (LittleRequest (..), parseHTTP, methodIsGet, parseHost) where 
 
 import Data.List as List
-import Data.ByteString.Char8 as Str
+import Data.ByteString.Char8 (unpack)
+import Network.Socket (HostName, ServiceName)
+import GetProxy.Types
 
-data LittleRequest = LittleRequest { method :: Maybe String,
-                                     path :: Maybe String,
-                                     version :: Maybe String,
-                                     host :: (Maybe String, Maybe String)
+data LittleRequest = LittleRequest { method :: String,
+                                     path :: String,
+                                     host :: (HostName, Maybe ServiceName)
                                    } deriving (Show, Eq)
 
+parseHTTP :: Request -> LittleRequest
 parseHTTP request = LittleRequest { method = currMethod,
                                     path = currPath,
-                                    version = currVersion,
-                                    host = currHost
+                                    host = (currHost, currPort)
                                   } 
-    where tokens = Str.words request
-          currMethod = Just $ unpack $ tokens !! 0 
-          currPath = Just $ unpack $ tokens !! 1
-          currVersion = Just $ unpack $ Str.dropWhile (/= '/') $ tokens !! 2
+    where tokens = words $ unpack request 
+          currMethod = tokens !! 0 
+          currPath = tokens !! 1
 
-          hostHeader = case List.elemIndex "Host:" tokens of
+          hostHeader = case elemIndex "Host:" tokens of
                            Nothing -> ""
                            Just n -> tokens !! (n+1)                      
           
@@ -35,19 +32,17 @@ parseHTTP request = LittleRequest { method = currMethod,
           способный растрогать любого. 
           Он выиграл спор: 
           -}
-          currHost = fixPort $ (Just (unpack $ Str.takeWhile (/=':') hostHeader), Just (unpack $ Str.dropWhile (/=':') hostHeader))
-
-          fixPort (Just host, Just "") = (Just host, Just "80")
-          fixPort (Just host, Just port) = (Just host, Just $ List.tail port)
-        
+          currHost = takeWhile (/=':') hostHeader
+          currPort = snd <$> (uncons $ dropWhile (/=':') hostHeader)
 
 
-
-          
-
-
+methodIsGet :: Request -> Bool
+methodIsGet request = "GET" == method (parseHTTP request)
 
 
-
-
-
+parseHost :: Request -> (Maybe HostName, Maybe ServiceName)
+parseHost request = 
+    case host $ parseHTTP request of 
+        ("", _) -> (Nothing, Nothing)
+        (hostname, Nothing) -> (Just hostname, Just "80")
+        (hostname, Just servicename) -> (Just hostname, Just servicename)
