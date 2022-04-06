@@ -1,6 +1,7 @@
 module Main where
 
 import GetProxy
+
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
 import Network.Socket (PortNumber)

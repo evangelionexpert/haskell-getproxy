@@ -40,7 +40,3 @@ getResponseFromSocket socket request = do
 
     close socket
     return response
-
-
-toMaybe :: Either e a -> Maybe a 
-toMaybe = either (\e -> Nothing) (\a -> Just a)

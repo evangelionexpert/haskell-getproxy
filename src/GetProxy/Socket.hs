@@ -3,12 +3,12 @@ module GetProxy.Socket where
 import GetProxy.Internal
 import GetProxy.Types
 import GetProxy.LittleParser
+import GetProxy.ToMaybe
 
 import Network.Socket
 import Network.Socket.ByteString
 
 import Control.Exception
-
 import Control.Monad
 import Control.Monad.Trans.Maybe
 

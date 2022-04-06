@@ -29,6 +29,7 @@ library
       GetProxy.Internal
       GetProxy.LittleParser
       GetProxy.Socket
+      GetProxy.ToMaybe
       GetProxy.Types
   other-modules:
       Paths_haskell_getproxy
